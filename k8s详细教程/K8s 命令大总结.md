@@ -574,19 +574,110 @@ ServiceAccounts
 5.1 Create an nginx pod with a liveness probe that just runs the command 'ls'. Save its YAML in pod.yaml. Run it, check its probe status, delete it.
 
 ```powershell
-[root@master ~]# 
+[root@master ~]# kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > pod.yaml
+```
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    imagePullPolicy: IfNotPresent
+    name: nginx
+    resources: {}
+    livenessProbe: # our probe
+      exec: # add this line
+        command: # command definition
+        - ls # ls command
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
+```
+
+```powershell
+[root@master ~]# kubectl create -f pod.yaml
+[root@master ~]# kubectl describe pod nginx | grep -i liveness
+[root@master ~]# kubectl delete -f pod.yaml
 ```
 
 5.2 Modify the pod.yaml file so that liveness probe starts kicking in after 5 seconds whereas the interval between probes would be 5 seconds. Run it, check the probe, delete it.
 
 ```powershell
-[root@master ~]# 
+[root@master ~]# kubectl explain pod.spec.containers.livenessProbe # get exact name of livenessProbe
+```
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    imagePullPolicy: IfNotPresent
+    name: nginx
+    resources: {}
+    livenessProbe: 
+      initialDelaySeconds: 5 # add this line
+      periodSeconds: 5 # add this line as well
+      exec:
+        command:
+        - ls
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
+```
+
+```powershell
+[root@master ~]# kubectl create -f pod.yaml
+[root@master ~]# kubectl describe pod nginx | grep -i liveness
+[root@master ~]# kubectl delete -f pod.yaml
 ```
 
 5.3 Create an nginx pod (that includes port 80) with an HTTP readinessProbe on path '/' on port 80. Again, run it, check the readinessProbe, delete it.
 
 ```powershell
-[root@master ~]# 
+[root@master ~]# kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > pod.yaml
+```
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    imagePullPolicy: IfNotPresent
+    name: nginx
+    resources: {}
+    ports:
+      - containerPort: 80 # Note: Readiness probes runs on the container during its whole lifecycle. Since nginx exposes 80, containerPort: 80 is not required for readiness to work.
+    readinessProbe: # declare the readiness probe
+      httpGet: # add this line
+        path: / #
+        port: 80 #
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
+```
+
+```powershell
+[root@master ~]# kubectl create -f pod.yaml
+[root@master ~]# kubectl describe pod nginx | grep -i readiness
+[root@master ~]# kubectl delete -f pod.yaml
 ```
 
 5.4 Lots of pods are running in qa, alan, test, production namespaces. All of these pods are configured with liveness probe. Please list all pods whose liveness probe are failed in the format of <namespace>/<pod name> per line.
